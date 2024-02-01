@@ -1,0 +1,100 @@
+name: CI/CD
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  Build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-java@v3
+        with:
+          java-version: '11'
+          distribution: 'adopt'
+
+      - name: Set up cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Build Lambda
+        run: ./gradlew build -Dquarkus.package.type=native -i
+
+      - name: Compress Artifacts
+        run: tar -czvf quarkus-artifacts.tar.gz -C build .
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: quarkus-artifacts
+          path: quarkus-artifacts.tar.gz
+
+  DeployHelloWorld:
+    needs: Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Download Artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: quarkus-artifacts
+
+      - name: Decompress Artifacts
+        run: |
+          mkdir -p build
+          tar -xzvf quarkus-artifacts.tar.gz -C build
+
+      - name: AWS Login
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: eu-west-3
+
+      - name: Deploy to AWS Lambda
+        run: |
+          ./manage_function.sh native deploy ServerlessHelloWorldJava QUARKUS_LAMBDA_HANDLER=hello-world
+        env:
+          LAMBDA_ROLE_ARN: ${{ secrets.LAMBDA_ROLE_ARN }}
+
+  DeployByeWorld:
+    needs: Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Download Artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: quarkus-artifacts
+
+      - name: Decompress Artifacts
+        run: |
+          mkdir -p build
+          tar -xzvf quarkus-artifacts.tar.gz -C build
+
+      - name: AWS Login
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: eu-west-3
+
+      - name: Deploy to AWS Lambda
+        run: |
+          ./manage_function.sh native deploy ServerlessByeWorldJava QUARKUS_LAMBDA_HANDLER=bye-world
+        env:
+          LAMBDA_ROLE_ARN: ${{ secrets.LAMBDA_ROLE_ARN }}

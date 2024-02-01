@@ -1,0 +1,44 @@
+plugins {
+    id 'java-library'
+    id 'io.quarkus' version '3.6.0'
+}
+
+group = 'org.crolopez'
+version = '1.0-SNAPSHOT'
+description = 'A simple hello world application using serverless technology'
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_11
+    targetCompatibility = JavaVersion.VERSION_11
+}
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+}
+
+dependencies {
+    implementation enforcedPlatform('io.quarkus:quarkus-bom:3.6.0')
+//    implementation enforcedPlatform('io.quarkus:quarkus-amazon-services-bom:3.6.0')
+
+    implementation 'io.quarkus:quarkus-amazon-lambda'
+    implementation 'io.quarkus:quarkus-rest-client'
+    implementation 'io.quarkus:quarkus-rest-client-jackson'
+    implementation('org.projectlombok:lombok:1.18.22')
+    implementation('com.fasterxml.jackson.core:jackson-databind:2.13.4.1')
+    implementation 'javax:javaee-api:8.0'
+    implementation 'io.quarkus:quarkus-smallrye-fault-tolerance'
+
+    annotationProcessor("org.projectlombok:lombok:1.18.22")
+
+//    testImplementation 'io.quarkus:quarkus-junit5'
+//    testImplementation 'io.rest-assured:rest-assured'
+}
+
+
+compileJava {
+    options.encoding = 'UTF-8'
+    options.compilerArgs << '-parameters'
+}
+
+
