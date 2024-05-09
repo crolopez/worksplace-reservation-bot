@@ -1,0 +1,18 @@
+quarkus:
+  lambda:
+    handler: telegram-handler
+
+telegram:
+  api:
+    hostname: api.telegram.org
+  bot:
+    token: ${TELEGRAM_BOT_TOKEN}
+
+bookingPlatform:
+  hostname: ${BOOKING_HOSTNAME}
+  login:
+    user: ${BOOKING_LOGIN_USER}
+    password: ${BOOKING_LOGIN_PASSWORD}
+  matching-tag:
+    office: ${BOOKING_MATCHING_TAG_OFFICE}
+    parking: ${BOOKING_MATCHING_TAG_PARKING}

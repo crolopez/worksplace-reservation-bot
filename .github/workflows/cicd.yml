@@ -28,7 +28,7 @@ jobs:
             ${{ runner.os }}-gradle-
 
       - name: Build Lambda
-        run: ./gradlew build -Dquarkus.package.type=native -i
+        run: ./gradlew build -Dquarkus.package.type=native -i --parallel
 
       - name: Compress Artifacts
         run: tar -czvf quarkus-artifacts.tar.gz -C build .
@@ -39,7 +39,7 @@ jobs:
           name: quarkus-artifacts
           path: quarkus-artifacts.tar.gz
 
-  DeployHelloWorld:
+  DeployFunction:
     needs: Build
     runs-on: ubuntu-latest
 
@@ -65,36 +65,6 @@ jobs:
 
       - name: Deploy to AWS Lambda
         run: |
-          ./manage_function.sh native deploy ServerlessHelloWorldJava QUARKUS_LAMBDA_HANDLER=hello-world
-        env:
-          LAMBDA_ROLE_ARN: ${{ secrets.LAMBDA_ROLE_ARN }}
-
-  DeployByeWorld:
-    needs: Build
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Download Artifacts
-        uses: actions/download-artifact@v3
-        with:
-          name: quarkus-artifacts
-
-      - name: Decompress Artifacts
-        run: |
-          mkdir -p build
-          tar -xzvf quarkus-artifacts.tar.gz -C build
-
-      - name: AWS Login
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: eu-west-3
-
-      - name: Deploy to AWS Lambda
-        run: |
-          ./manage_function.sh native deploy ServerlessByeWorldJava QUARKUS_LAMBDA_HANDLER=bye-world
+          ./manage_function.sh native deploy WorkplaceReservationBot 'QUARKUS_LAMBDA_HANDLER=telegram-handler,TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }},BOOKING_HOSTNAME=${{ secrets.BOOKING_HOSTNAME }},BOOKING_LOGIN_USER=${{ secrets.BOOKING_LOGIN_USER }},BOOKING_LOGIN_PASSWORD=${{ secrets.BOOKING_LOGIN_PASSWORD }},BOOKING_MATCHING_TAG_OFFICE=${{ secrets.BOOKING_MATCHING_TAG_OFFICE }},BOOKING_MATCHING_TAG_PARKING=${{ secrets.BOOKING_MATCHING_TAG_PARKING }}'
         env:
           LAMBDA_ROLE_ARN: ${{ secrets.LAMBDA_ROLE_ARN }}

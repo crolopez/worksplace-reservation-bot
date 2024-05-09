@@ -1,0 +1,201 @@
+openapi: 3.0.2
+info:
+    title: Telegram Bot API
+    version: 1.0.0
+    description: 'https://core.telegram.org/bots/api'
+paths:
+    '/bot{token}/sendMessage':
+        post:
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/TelegramBotApiRequestDto'
+                required: true
+            tags:
+                - telegramBot
+            parameters:
+                -
+                    name: token
+                    schema:
+                        type: string
+                    in: path
+                    required: true
+            responses:
+                '200':
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/TelegramBotApiResponseDto'
+                    description: OK
+            operationId: sendMessage
+            summary: Send a message
+components:
+    schemas:
+        TelegramBotApiRequestDto:
+            title: Root Type for TelegramBotApiRequestDto
+            description: ''
+            required:
+                - chat_id
+                - text
+                - parse_mode
+            type: object
+            properties:
+                chat_id:
+                    type: string
+                text:
+                    type: string
+                parse_mode:
+                    description: ''
+                    type: string
+            example:
+                chat_id: '123456789'
+                text: Test message
+                parse_mode: markdown
+        TelegramBotApiResponseDto:
+            title: Root Type for TelegramBotApiResponseDto
+            description: ''
+            type: object
+            properties:
+                ok:
+                    type: boolean
+                result:
+                    $ref: '#/components/schemas/TelegramBotApiResponseResultDto'
+                    properties:
+                        message_id:
+                            format: int32
+                            type: integer
+                        from:
+                            type: object
+                            properties:
+                                id:
+                                    format: int32
+                                    type: integer
+                                is_bot:
+                                    type: boolean
+                                first_name:
+                                    type: string
+                                username:
+                                    type: string
+                        chat:
+                            type: object
+                            properties:
+                                id:
+                                    format: int32
+                                    type: integer
+                                first_name:
+                                    type: string
+                                username:
+                                    type: string
+                                type:
+                                    type: string
+                        date:
+                            format: int32
+                            type: integer
+                        text:
+                            type: string
+            example:
+                ok: true
+                result:
+                    message_id: 521
+                    from:
+                        id: 67962341
+                        is_bot: true
+                        first_name: Bot Name
+                        username: botUserName
+                    chat:
+                        id: 44317519
+                        first_name: Chat first name
+                        username: chatUserName
+                        type: private
+                    date: 1703850010
+                    text: Test message
+        TelegramBotApiResponseResultDto:
+            title: Root Type for TelegramBotApiResponseResultDto
+            description: ''
+            type: object
+            properties:
+                message_id:
+                    format: int64
+                    type: integer
+                from:
+                    $ref: '#/components/schemas/TelegramBotApiResponseFromDto'
+                    properties:
+                        id:
+                            format: int32
+                            type: integer
+                        is_bot:
+                            type: boolean
+                        first_name:
+                            type: string
+                        username:
+                            type: string
+                chat:
+                    $ref: '#/components/schemas/TelegramBotApiResponseChat'
+                    properties:
+                        id:
+                            format: int32
+                            type: integer
+                        first_name:
+                            type: string
+                        username:
+                            type: string
+                        type:
+                            type: string
+                date:
+                    format: int64
+                    type: integer
+                text:
+                    type: string
+            example:
+                message_id: 521
+                from:
+                    id: 676231
+                    is_bot: true
+                    first_name: Bot Name
+                    username: botUserName
+                chat:
+                    id: 442356519
+                    first_name: Chat first name
+                    username: chatUserName
+                    type: private
+                date: 1703850010
+                text: Test message
+        TelegramBotApiResponseFromDto:
+            title: Root Type for TelegramBotApiResponseFromDto
+            description: ''
+            type: object
+            properties:
+                id:
+                    format: int64
+                    type: integer
+                is_bot:
+                    type: boolean
+                first_name:
+                    type: string
+                username:
+                    type: string
+            example:
+                id: 676231
+                is_bot: true
+                first_name: Bot Name
+                username: botUserName
+        TelegramBotApiResponseChat:
+            title: Root Type for TelegramBotApiResponseChat
+            description: ''
+            type: object
+            properties:
+                id:
+                    format: int64
+                    type: integer
+                is_bot:
+                    type: boolean
+                first_name:
+                    type: string
+                username:
+                    type: string
+            example:
+                id: 676231
+                is_bot: true
+                first_name: Bot Name
+                username: botUserName

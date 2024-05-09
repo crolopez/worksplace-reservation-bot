@@ -33,3 +33,8 @@ build
 *.ipr
 *.iml
 *.iws
+
+.openapi-generator
+pom.xml
+
+*-rprod.json

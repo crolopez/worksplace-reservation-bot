@@ -1,0 +1,427 @@
+openapi: 3.0.2
+info:
+    title: Booking Platform API
+    version: '1.0'
+paths:
+    /user/login:
+        post:
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/LoginRequestDto'
+            tags:
+                - bookingPlatform
+            parameters:
+                -
+                    name: x-matrix-source
+                    schema:
+                        type: string
+                        example: WEB
+                    in: header
+                    required: true
+                -
+                    name: x-time-zone
+                    schema:
+                        type: string
+                        example: Europe/Madrid
+                    in: header
+                    required: true
+            responses:
+                '200':
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    token:
+                                        description: Authentication token
+                                        type: string
+                    description: Successful login
+                '401':
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    message:
+                                        description: Error message
+                                        type: string
+                    description: Unauthorized
+            operationId: login
+            summary: User login
+    /user/current/bookings:
+        get:
+            tags:
+                - bookingPlatform
+            parameters:
+                -
+                    style: form
+                    explode: true
+                    name: include
+                    description: Specifies which related resources should be included in the response
+                    schema:
+                        type: array
+                        items:
+                            enum:
+                                - locations
+                                - bookingSettings
+                            type: string
+                    in: query
+                    required: false
+                -
+                    name: x-matrix-source
+                    schema:
+                        type: string
+                        example: WEB
+                    in: header
+                    required: true
+                -
+                    name: x-time-zone
+                    schema:
+                        type: string
+                        example: Europe/Madrid
+                    in: header
+                    required: true
+                -
+                    name: cookie
+                    description: ''
+                    schema:
+                        type: string
+                    in: header
+                    required: true
+            responses:
+                '200':
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/BookingResponseDto'
+                    description: List of current user bookings
+                '401':
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    message:
+                                        description: Error message
+                                        type: string
+                    description: Unauthorized
+            operationId: getBookings
+            summary: Retrieve current user bookings
+components:
+    schemas:
+        LoginRequestDto:
+            required:
+                - username
+                - password
+            type: object
+            properties:
+                username:
+                    type: string
+                    example: fakeMail
+                password:
+                    type: string
+                    example: fakePassword
+        BookingResponseDto:
+            title: Root Type for BookingResponseDto
+            description: ''
+            required:
+                - locations
+                - bookings
+                - ancestorLocations
+            type: object
+            properties:
+                bookings:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/BookingDto'
+                locations:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/LocationDto'
+                ancestorLocations:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/AncestorLocationDto'
+            example:
+                bookings:
+                    -
+                        id: 9991132992
+                        owner:
+                            id: 990061102
+                            name: Alex Johnson
+                            email: alexjohnson@example.com
+                        bookedBy:
+                            id: 990061103
+                            name: Alex Johnson
+                            email: alexjohnson@example.com
+                        timeFrom: '2024-03-19T08:00:00.000'
+                        timeTo: '2024-03-19T19:00:00.000'
+                        locationId: 555220406
+                locations:
+                    -
+                        id: 555220406
+                        organisationId: 555510196
+                        parentId: 554228368
+                        name: 34 Exterior Space
+                        shortQualifier: Company Parking
+                        longQualifier: 'Company Office Parking, Company Parking'
+                        qualifiedName: '34 Exterior Space, Company Office Parking, Company Parking'
+                        bookingCategoryId: 554240906
+                        settings:
+                            timeZone:
+                                location:
+                                    id: 554228294
+                                    name: Company Parking
+                                zoneId: Europe/Madrid
+                ancestorLocations:
+                    -
+                        id: 554228294
+                        organisationId: 555510196
+                        kind: BUILDING
+                        name: Company Parking
+                        qualifiedName: Company Parking
+                        left: 1286
+                        right: 1741
+                        isFlex: false
+                        settings:
+                            timeZone:
+                                location:
+                                    id: 554228294
+                                    name: Company Parking
+                                zoneId: Europe/Madrid
+        AncestorLocationDto:
+            title: Root Type for AncestorLocationDto
+            description: ''
+            type: object
+            properties:
+                id:
+                    type: string
+                organisationId:
+                    format: int32
+                    type: integer
+                kind:
+                    type: string
+                name:
+                    type: string
+                qualifiedName:
+                    type: string
+                left:
+                    format: int32
+                    type: integer
+                right:
+                    format: int32
+                    type: integer
+                isFlex:
+                    type: boolean
+                settings:
+                    $ref: '#/components/schemas/SettingDto'
+                    properties:
+                        timeZone:
+                            type: object
+                            properties:
+                                location:
+                                    type: object
+                                    properties:
+                                        id:
+                                            format: int32
+                                            type: integer
+                                        name:
+                                            type: string
+                                zoneId:
+                                    type: string
+            example:
+                id: 554228294
+                organisationId: 555510196
+                kind: BUILDING
+                name: Company Parking
+                qualifiedName: Company Parking
+                left: 1286
+                right: 1741
+                isFlex: false
+                settings:
+                    timeZone:
+                        location:
+                            id: 554228294
+                            name: Company Parking
+                        zoneId: Europe/Madrid
+        SettingDto:
+            title: Root Type for SettingDto
+            description: ''
+            type: object
+            properties:
+                timeZone:
+                    $ref: '#/components/schemas/TimeZoneDto'
+                    properties:
+                        location:
+                            type: object
+                            properties:
+                                id:
+                                    format: int32
+                                    type: integer
+                                name:
+                                    type: string
+                        zoneId:
+                            type: string
+            example:
+                timeZone:
+                    location:
+                        id: 554228294
+                        name: Company Parking
+                    zoneId: Europe/Madrid
+        TimeZoneDto:
+            title: Root Type for TimeZoneDto
+            description: ''
+            type: object
+            properties:
+                location:
+                    $ref: '#/components/schemas/TimeZoneLocationDto'
+                    properties:
+                        id:
+                            format: int32
+                            type: integer
+                        name:
+                            type: string
+                zoneId:
+                    type: string
+            example:
+                location:
+                    id: 554228294
+                    name: Company Parking
+                zoneId: Europe/Madrid
+        BookingDto:
+            title: Root Type for BookingDto
+            description: ''
+            type: object
+            properties:
+                id:
+                    type: string
+                owner:
+                    $ref: '#/components/schemas/IdentityDto'
+                    properties:
+                        id:
+                            format: int32
+                            type: integer
+                        name:
+                            type: string
+                        email:
+                            type: string
+                bookedBy:
+                    $ref: '#/components/schemas/IdentityDto'
+                    properties:
+                        id:
+                            format: int32
+                            type: integer
+                        name:
+                            type: string
+                        email:
+                            type: string
+                timeFrom:
+                    format: date-time
+                    type: string
+                timeTo:
+                    format: date-time
+                    type: string
+                locationId:
+                    type: string
+            example:
+                id: 9991132992
+                owner:
+                    id: 990061102
+                    name: Alex Johnson
+                    email: alexjohnson@example.com
+                bookedBy:
+                    id: 990061103
+                    name: Alex Johnson
+                    email: alexjohnson@example.com
+                timeFrom: '2024-03-19T08:00:00.000'
+                timeTo: '2024-03-19T19:00:00.000'
+                locationId: 555220406
+        IdentityDto:
+            title: Root Type for IdentityDto
+            description: ''
+            type: object
+            properties:
+                id:
+                    type: string
+                name:
+                    type: string
+                email:
+                    type: string
+            example:
+                id: 990061102
+                name: Alex Johnson
+                email: alexjohnson@example.com
+        TimeZoneLocationDto:
+            title: Root Type for LocationDto
+            description: ''
+            type: object
+            properties:
+                id:
+                    type: string
+                name:
+                    type: string
+            example:
+                id: 554228294
+                name: Company Parking
+        LocationDto:
+            title: Root Type for LocationDto
+            description: ''
+            type: object
+            properties:
+                id:
+                    type: string
+                organisationId:
+                    type: string
+                parentId:
+                    type: string
+                name:
+                    type: string
+                shortQualifier:
+                    type: string
+                longQualifier:
+                    type: string
+                qualifiedName:
+                    type: string
+                bookingCategoryId:
+                    type: string
+                settings:
+                    $ref: '#/components/schemas/SettingDto'
+                    properties:
+                        timeZone:
+                            type: object
+                            properties:
+                                location:
+                                    type: object
+                                    properties:
+                                        id:
+                                            format: int32
+                                            type: integer
+                                        name:
+                                            type: string
+                                zoneId:
+                                    type: string
+            example:
+                id: 555220406
+                organisationId: 555510196
+                parentId: 554228368
+                name: 94 Exterior Space
+                shortQualifier: Company Parking
+                longQualifier: 'Company Office Parking, Company Parking'
+                qualifiedName: '94 Exterior Space, Company Office Parking, Company Parking'
+                bookingCategoryId: 554240906
+                settings:
+                    timeZone:
+                        location:
+                            id: 554228294
+                            name: Company Parking
+                        zoneId: Europe/Madrid
+    securitySchemes:
+        ApiKeyAuth:
+            type: apiKey
+            name: x-matrix-source
+            in: header
+security:
+    -
+        ApiKeyAuth: []

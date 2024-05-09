@@ -1,0 +1,210 @@
+openapi: 3.0.2
+info:
+    title: Telegram Webhook API
+    version: 1.0.0
+    description: A brand new API with no content.  Go nuts!
+paths: {}
+components:
+    schemas:
+        TelegramWebhookEventDto:
+            title: Root Type for TelegramWebhookEventDto
+            description: ''
+            required:
+                - message
+            type: object
+            properties:
+                update_id:
+                    format: int32
+                    type: integer
+                message:
+                    $ref: '#/components/schemas/TelegramMessageDto'
+                    properties:
+                        message_id:
+                            format: int32
+                            type: integer
+                        from:
+                            type: object
+                            properties:
+                                id:
+                                    format: int32
+                                    type: integer
+                                is_bot:
+                                    type: boolean
+                                first_name:
+                                    type: string
+                                username:
+                                    type: string
+                                language_code:
+                                    type: string
+                        chat:
+                            type: object
+                            properties:
+                                id:
+                                    format: int32
+                                    type: integer
+                                first_name:
+                                    type: string
+                                username:
+                                    type: string
+                                type:
+                                    type: string
+                        date:
+                            format: int32
+                            type: integer
+                        text:
+                            type: string
+            example:
+                update_id: 23341721
+                message:
+                    message_id: 7
+                    from:
+                        id: 133527518
+                        is_bot: false
+                        first_name: FirstName
+                        username: UserName
+                        language_code: en
+                    chat:
+                        id: 51527518
+                        first_name: FirstName
+                        username: UserName
+                        type: private
+                    date: 1703676265
+                    text: /createGame MW3
+        TelegramMessageDto:
+            title: Root Type for TelegramMessageDto
+            description: ''
+            required:
+                - chat
+                - from
+                - text
+                - message_id
+                - date
+            type: object
+            properties:
+                message_id:
+                    format: int32
+                    type: integer
+                from:
+                    $ref: '#/components/schemas/TelegramMessageFromDto'
+                    properties:
+                        id:
+                            format: int32
+                            type: integer
+                        is_bot:
+                            type: boolean
+                        first_name:
+                            type: string
+                        username:
+                            type: string
+                        language_code:
+                            type: string
+                chat:
+                    $ref: '#/components/schemas/TelegramMessageChatDto'
+                    properties:
+                        id:
+                            format: int32
+                            type: integer
+                        first_name:
+                            type: string
+                        username:
+                            type: string
+                        type:
+                            type: string
+                date:
+                    format: int32
+                    type: integer
+                text:
+                    type: string
+                entities:
+                    description: ''
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/TelegramMessageEntityDto'
+            example:
+                message_id: 7
+                from:
+                    id: 133527518
+                    is_bot: false
+                    first_name: FirstName
+                    username: UserName
+                    language_code: en
+                chat:
+                    id: 51527518
+                    first_name: FirstName
+                    username: UserName
+                    type: private
+                date: 1703676265
+                text: /createGame MW3
+                entities:
+                    -
+                        offset: 0
+                        length: 8
+                        type: bot_command
+        TelegramMessageFromDto:
+            title: Root Type for TelegramMessageFromDto
+            description: ''
+            required:
+                - username
+                - first_name
+                - id
+                - is_bot
+                - language_code
+            type: object
+            properties:
+                id:
+                    format: int32
+                    type: integer
+                is_bot:
+                    type: boolean
+                first_name:
+                    type: string
+                username:
+                    type: string
+                language_code:
+                    type: string
+            example:
+                id: 133527518
+                is_bot: false
+                first_name: FirstName
+                username: UserName
+                language_code: en
+        TelegramMessageChatDto:
+            title: Root Type for TelegramMessageChatDto
+            description: ''
+            required:
+                - id
+                - username
+                - type
+                - first_name
+            type: object
+            properties:
+                id:
+                    type: string
+                first_name:
+                    type: string
+                username:
+                    type: string
+                type:
+                    type: string
+            example:
+                id: 51527518
+                first_name: FirstName
+                username: UserName
+                type: private
+        TelegramMessageEntityDto:
+            title: Root Type for TelegramMessageEntityDto
+            description: ''
+            type: object
+            properties:
+                offset:
+                    format: int32
+                    type: integer
+                length:
+                    format: int32
+                    type: integer
+                type:
+                    type: string
+            example:
+                offset: 0
+                length: 8
+                type: bot_command

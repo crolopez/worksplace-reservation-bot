@@ -1,6 +1,6 @@
-# Serverless Hello World Java
+# Workplace Reservation Bot
 
-The purpose of this project is to make a fast template to support more complex serverless applications using Java and Quarkus.
+Bot to avoid the time you spend worrying about having or not having a place to go to an office you don't want to go to.
 
 ## Prerequisites
 
@@ -21,7 +21,7 @@ Just execute
 Just run the following command to start a live-code development server:
 
 ``` bash
-QUARKUS_LAMBDA_HANDLER="hello-world" ./gradlew quarkusDev
+QUARKUS_LAMBDA_HANDLER="telegram-handler" ./gradlew quarkusDev
 ```
 
 After that, you can start launching events as follows.
@@ -37,6 +37,6 @@ If you want to deploy the application on AWS, follow these steps:
 
 1) Run the following by setting your lambda role RNA:
 ``` bash
-LAMBDA_ROLE_ARN=XXXXXX ./manage_function.sh deploy ServerlessHelloWorldJava QUARKUS_LAMBDA_HANDLER=hello-world
+LAMBDA_ROLE_ARN=XXXXX ./manage_function.sh deploy WorkplaceReservationBot QUARKUS_LAMBDA_HANDLER=telegram-handler,TELEGRAM_BOT_TOKEN=YYYYY
 ```
 2) Configure an API Gateway to point to your Lambda and you're done.
