@@ -16,3 +16,10 @@ bookingPlatform:
   matching-tag:
     office: ${BOOKING_MATCHING_TAG_OFFICE}
     parking: ${BOOKING_MATCHING_TAG_PARKING}
+  keys:
+    office:
+      bc: ${BOOKING_KEYS_OFFICE_BC}
+      l: ${BOOKING_KEYS_OFFICE_L}
+    parking:
+      bc: ${BOOKING_KEYS_PARKING_BC}
+      l: ${BOOKING_KEYS_PARKING_L}

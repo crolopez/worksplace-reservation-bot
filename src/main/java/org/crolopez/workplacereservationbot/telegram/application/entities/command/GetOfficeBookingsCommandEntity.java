@@ -3,8 +3,7 @@ package org.crolopez.workplacereservationbot.telegram.application.entities.comma
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import org.crolopez.workplacereservationbot.booking.application.BookingService;
-import org.crolopez.workplacereservationbot.booking.domain.entities.BookingEntity;
-import org.crolopez.workplacereservationbot.shared.application.entities.command.CommandEntity;
+import org.crolopez.workplacereservationbot.booking.domain.entities.LocationEntity;
 
 import java.util.List;
 
@@ -20,7 +19,7 @@ public class GetOfficeBookingsCommandEntity extends TelegramCommandEntity {
 
     @Override
     protected String launch(String... args) {
-        List<BookingEntity> bookings = service.getOfficeBookings();
+        List<LocationEntity> bookings = service.getOfficeBookings();
         return formatter.format(bookings);
     }
 

@@ -8,24 +8,24 @@ import org.crolopez.workplacereservationbot.booking.domain.entities.LocationEnti
 import java.util.List;
 
 @Singleton
-public class GetParkingBookingsCommandEntity extends TelegramCommandEntity {
+public class GetOfficeAvailabilityCommandEntity extends TelegramCommandEntity {
 
     @Inject
     BookingService service;
 
-    public GetParkingBookingsCommandEntity() {
-        this.alias = "/getParkingBookings";
+    public GetOfficeAvailabilityCommandEntity() {
+        this.alias = "/getOfficeAvailability";
     }
 
     @Override
     protected String launch(String... args) {
-        List<LocationEntity> bookings = service.getParkingBookings();
-        return formatter.format(bookings);
+        List<LocationEntity> officeSlots = service.getOfficeAvailability(args[0]);
+        return formatter.format(officeSlots);
     }
 
     @Override
     protected int getExpectedArgs() {
-        return 0;
+        return 1;
     }
 }
 

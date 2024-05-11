@@ -7,7 +7,7 @@ import java.util.Date;
 
 @Data
 @Builder
-public class BookingEntity {
+public class LocationEntity {
     Date date;
     String id;
     String place;

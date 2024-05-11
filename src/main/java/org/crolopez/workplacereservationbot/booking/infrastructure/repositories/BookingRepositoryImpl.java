@@ -4,20 +4,21 @@ import jakarta.annotation.PostConstruct;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import lombok.SneakyThrows;
-import org.crolopez.workplacereservationbot.booking.domain.entities.BookingEntity;
+import org.crolopez.workplacereservationbot.booking.domain.entities.LocationEntity;
 import org.crolopez.workplacereservationbot.booking.domain.entities.repositories.BookingRepository;
 import org.crolopez.workplacereservationbot.booking.infrastructure.configuration.BookingPlatformConfig;
 import org.crolopez.workplacereservationbot.booking.infrastructure.repositories.client.BookingPlatformApi;
 import org.crolopez.workplacereservationbot.booking.infrastructure.repositories.client.dto.*;
 
 import java.sql.Date;
-import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+
+import static org.crolopez.workplacereservationbot.booking.infrastructure.repositories.client.dto.AvailabilityDiscreteDto.StatusEnum.AVAILABLE;
 
 @Singleton
 public class BookingRepositoryImpl implements BookingRepository {
@@ -37,29 +38,41 @@ public class BookingRepositoryImpl implements BookingRepository {
 
     @SneakyThrows
     @Override
-    public List<BookingEntity> getParkingBookings() {
+    public List<LocationEntity> getParkingBookings() {
         return getFilteredBookings(config.matchingTag().parking());
     }
 
     @SneakyThrows
     @Override
-    public List<BookingEntity> getOfficeBookings() {
+    public List<LocationEntity> getOfficeBookings() {
         return getFilteredBookings(config.matchingTag().office());
     }
 
-    private List<BookingEntity> getFilteredBookings(String bookingType) throws ApiException {
+    @SneakyThrows
+    @Override
+    public List<LocationEntity> getParkingAvailability(String date) {
+        return getAvailability(date, config.keys().parking());
+    }
+
+    @SneakyThrows
+    @Override
+    public List<LocationEntity> getOfficeAvailability(String date) {
+        return getAvailability(date, config.keys().office());
+    }
+
+    private List<LocationEntity> getFilteredBookings(String bookingType) throws ApiException {
         String authToken = getAuthToken();
-        BookingResponseDto response = getBookings(authToken);
+        UserBookingResponseDto response = getBookings(authToken);
 
         Map<String, LocationDto> locationMap = response.getLocations().stream()
                 .filter(location -> location.getShortQualifier().equals(bookingType))
                 .collect(Collectors.toMap(LocationDto::getId, Function.identity()));
 
-        List<BookingEntity> bookingEntities = response.getBookings().stream()
+        List<LocationEntity> bookingEntities = response.getBookings().stream()
                 .filter(booking -> locationMap.containsKey(booking.getLocationId()))
                 .map(booking -> {
                     LocationDto location = locationMap.get(booking.getLocationId());
-                    return BookingEntity.builder()
+                    return LocationEntity.builder()
                             .date(Date.from(booking.getTimeFrom().toInstant()))
                             .id(booking.getId())
                             .place(location.getQualifiedName())
@@ -70,11 +83,11 @@ public class BookingRepositoryImpl implements BookingRepository {
         return bookingEntities;
     }
 
-    private BookingResponseDto getBookings(String authToken) throws ApiException {
+    private UserBookingResponseDto getBookings(String authToken) throws ApiException {
         String cookie = getCookie(authToken);
         List<String> includes = List.of("locations", "visit", "facilities", "extras", "bookingSettings", "layouts");
 
-        return bookingPlatformApi.getBookings(X_MATRIX_SOURCE, X_TIME_ZONE, cookie, includes);
+        return bookingPlatformApi.getUserBookings(X_MATRIX_SOURCE, X_TIME_ZONE, cookie, includes);
     }
 
     private String getCookie(String authToken) {
@@ -113,6 +126,37 @@ public class BookingRepositoryImpl implements BookingRepository {
                 .map(matcher -> matcher.group(1))
                 .findFirst()
                 .orElse(null);
+    }
+
+    private List<LocationEntity> getAvailability(String date, BookingPlatformConfig.KeyNode key) throws ApiException {
+        String authToken = getAuthToken();
+        String cookie = getCookie(authToken);
+        List<String> includes = List.of("locations", "facilities", "layouts", "bookingSettings", "floorplan", "bookings", "discrete");
+        List<String> status = List.of("available", "unavailable", "booked");
+
+        String from = date + "T00:00";
+        String to = date + "T23:59";
+
+        ApiResponse<AvailabilityResponseDto> response = bookingPlatformApi.getAvailabilityWithHttpInfo(from, to,
+                key.bc(), key.l(), includes, status, X_MATRIX_SOURCE, X_TIME_ZONE, cookie);
+        List<AvailabilityDiscreteDto> availableLocations = response.getData().getDiscreteAvailability();
+        List<AvailabilityLocationDto> locations = response.getData().getLocations();
+
+        Map<String, AvailabilityLocationDto> locationMap = locations.stream()
+                .collect(Collectors.toMap(AvailabilityLocationDto::getId, Function.identity()));
+
+        return availableLocations.stream()
+                .filter(availableLocation -> availableLocation.getStatus().equals(AVAILABLE))
+                .filter(availableLocation -> locationMap.containsKey(availableLocation.getLocationId()))
+                .map(availableLocation -> {
+                    AvailabilityLocationDto locationDto = locationMap.get(availableLocation.getLocationId());
+                    return LocationEntity.builder()
+                            .date(Date.valueOf(date))
+                            .place(locationDto.getName())
+                            .id(locationDto.getId())
+                            .build();
+                })
+                .collect(Collectors.toList());
     }
 
 }

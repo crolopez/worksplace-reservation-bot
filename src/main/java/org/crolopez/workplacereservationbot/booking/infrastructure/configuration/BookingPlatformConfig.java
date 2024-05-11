@@ -15,6 +15,8 @@ public interface BookingPlatformConfig {
 
     MatchingTag matchingTag();
 
+    Keys keys();
+
     interface Login {
 
         String user();
@@ -26,5 +28,17 @@ public interface BookingPlatformConfig {
         String office();
 
         String parking();
+    }
+
+    interface Keys {
+        KeyNode office();
+
+        KeyNode parking();
+    }
+
+    interface KeyNode {
+        String bc();
+
+        String l();
     }
 }

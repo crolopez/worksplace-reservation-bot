@@ -95,7 +95,7 @@ paths:
                     content:
                         application/json:
                             schema:
-                                $ref: '#/components/schemas/BookingResponseDto'
+                                $ref: '#/components/schemas/UserBookingResponseDto'
                     description: List of current user bookings
                 '401':
                     content:
@@ -107,8 +107,138 @@ paths:
                                         description: Error message
                                         type: string
                     description: Unauthorized
-            operationId: getBookings
+            operationId: getUserBookings
             summary: Retrieve current user bookings
+    /booking:
+        post:
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/SetBookingRequest'
+                required: true
+            tags:
+                - bookingPlatform
+            parameters:
+                -
+                    style: form
+                    explode: true
+                    name: include
+                    schema:
+                        type: array
+                        items:
+                            type: string
+                    in: query
+                    required: false
+                -
+                    name: x-matrix-source
+                    schema:
+                        type: string
+                        example: WEB
+                    in: header
+                    required: true
+                -
+                    name: x-time-zone
+                    schema:
+                        type: string
+                        example: Europe/Madrid
+                    in: header
+                    required: true
+                -
+                    name: cookie
+                    description: ''
+                    schema:
+                        type: string
+                    in: header
+                    required: true
+            responses:
+                '200':
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/BookingsResponseDto'
+                    description: OK
+            operationId: setBooking
+    /availability:
+        get:
+            tags:
+                - bookingPlatform
+            responses:
+                '200':
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/AvailabilityResponseDto'
+                    description: OK
+            operationId: getAvailability
+        parameters:
+            -
+                name: f
+                description: ''
+                schema:
+                    type: string
+                in: query
+                required: true
+            -
+                name: t
+                description: ''
+                schema:
+                    type: string
+                in: query
+                required: true
+            -
+                name: bc
+                description: ''
+                schema:
+                    type: string
+                in: query
+                required: true
+            -
+                name: l
+                description: ''
+                schema:
+                    type: string
+                in: query
+                required: true
+            -
+                name: include
+                description: ''
+                schema:
+                    type: array
+                    items:
+                        type: string
+                in: query
+                required: true
+            -
+                name: status
+                description: ''
+                schema:
+                    type: array
+                    items:
+                        type: string
+                in: query
+                required: true
+            -
+                name: x-matrix-source
+                schema:
+                    type: string
+                    example: WEB
+                in: header
+                required: true
+            -
+                name: x-time-zone
+                schema:
+                    type: string
+                    example: Europe/Madrid
+                in: header
+                required: true
+            -
+                name: cookie
+                description: ''
+                schema:
+                    type: string
+                in: header
+                required: true
 components:
     schemas:
         LoginRequestDto:
@@ -123,74 +253,6 @@ components:
                 password:
                     type: string
                     example: fakePassword
-        BookingResponseDto:
-            title: Root Type for BookingResponseDto
-            description: ''
-            required:
-                - locations
-                - bookings
-                - ancestorLocations
-            type: object
-            properties:
-                bookings:
-                    type: array
-                    items:
-                        $ref: '#/components/schemas/BookingDto'
-                locations:
-                    type: array
-                    items:
-                        $ref: '#/components/schemas/LocationDto'
-                ancestorLocations:
-                    type: array
-                    items:
-                        $ref: '#/components/schemas/AncestorLocationDto'
-            example:
-                bookings:
-                    -
-                        id: 9991132992
-                        owner:
-                            id: 990061102
-                            name: Alex Johnson
-                            email: alexjohnson@example.com
-                        bookedBy:
-                            id: 990061103
-                            name: Alex Johnson
-                            email: alexjohnson@example.com
-                        timeFrom: '2024-03-19T08:00:00.000'
-                        timeTo: '2024-03-19T19:00:00.000'
-                        locationId: 555220406
-                locations:
-                    -
-                        id: 555220406
-                        organisationId: 555510196
-                        parentId: 554228368
-                        name: 34 Exterior Space
-                        shortQualifier: Company Parking
-                        longQualifier: 'Company Office Parking, Company Parking'
-                        qualifiedName: '34 Exterior Space, Company Office Parking, Company Parking'
-                        bookingCategoryId: 554240906
-                        settings:
-                            timeZone:
-                                location:
-                                    id: 554228294
-                                    name: Company Parking
-                                zoneId: Europe/Madrid
-                ancestorLocations:
-                    -
-                        id: 554228294
-                        organisationId: 555510196
-                        kind: BUILDING
-                        name: Company Parking
-                        qualifiedName: Company Parking
-                        left: 1286
-                        right: 1741
-                        isFlex: false
-                        settings:
-                            timeZone:
-                                location:
-                                    id: 554228294
-                                    name: Company Parking
-                                zoneId: Europe/Madrid
         AncestorLocationDto:
             title: Root Type for AncestorLocationDto
             description: ''
@@ -417,6 +479,300 @@ components:
                             id: 554228294
                             name: Company Parking
                         zoneId: Europe/Madrid
+        BookingsResponseDto:
+            title: Root Type for BookingsResponseDto
+            description: ''
+            type: object
+            properties:
+                id:
+                    format: int32
+                    type: integer
+                owner:
+                    $ref: '#/components/schemas/IdentityDto'
+                    properties:
+                        id:
+                            format: int32
+                            type: integer
+                        name:
+                            type: string
+                        email:
+                            type: string
+                bookedBy:
+                    $ref: '#/components/schemas/IdentityDto'
+                    properties:
+                        id:
+                            format: int32
+                            type: integer
+                        name:
+                            type: string
+                        email:
+                            type: string
+                timeFrom:
+                    format: date-time
+                    type: string
+                timeTo:
+                    format: date-time
+                    type: string
+                locationId:
+                    format: int32
+                    type: integer
+                locationKind:
+                    type: string
+                status:
+                    type: string
+                hasStarted:
+                    type: boolean
+                hasEnded:
+                    type: boolean
+                duration:
+                    type: object
+                    properties:
+                        millis:
+                            format: int32
+                            type: integer
+                possibleActions:
+                    type: object
+                    properties:
+                        edit:
+                            type: boolean
+                        cancel:
+                            type: boolean
+                        approve:
+                            type: boolean
+                        confirm:
+                            type: boolean
+                        endEarly:
+                            type: boolean
+                        changeOwner:
+                            type: boolean
+                        start:
+                            type: boolean
+                        viewHistory:
+                            type: boolean
+                checkInStatus:
+                    type: string
+                attendeeCount:
+                    format: int32
+                    type: integer
+                ownerIsAttendee:
+                    type: boolean
+                source:
+                    type: string
+                version:
+                    format: int32
+                    type: integer
+                hasExternalNotes:
+                    type: boolean
+            example:
+                id: 29523577
+                owner:
+                    id: 6346342
+                    name: fakeUser
+                    email: fakeMail
+                bookedBy:
+                    id: 56346334
+                    name: fakeUser
+                    email: fakeMail
+                timeFrom: '2024-05-23T08:00:00.000'
+                timeTo: '2024-05-23T19:00:00.000'
+                locationId: 6435631
+                locationKind: EQUIPMENT
+                status: CONFIRMED
+                hasStarted: false
+                hasEnded: false
+                duration:
+                    millis: 325325
+                possibleActions:
+                    edit: true
+                    cancel: true
+                    approve: false
+                    confirm: false
+                    endEarly: false
+                    changeOwner: false
+                    start: false
+                    viewHistory: true
+                checkInStatus: NOT_REQUIRED
+                attendeeCount: 1
+                ownerIsAttendee: true
+                source: WEB
+                version: 1
+                hasExternalNotes: false
+        UserBookingResponseDto:
+            title: Root Type for BookingResponseDto
+            description: ''
+            required:
+                - locations
+                - bookings
+                - ancestorLocations
+            type: object
+            properties:
+                bookings:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/BookingDto'
+                locations:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/LocationDto'
+                ancestorLocations:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/AncestorLocationDto'
+            example:
+                bookings:
+                    -
+                        id: 9991132992
+                        owner:
+                            id: 990061102
+                            name: Alex Johnson
+                            email: alexjohnson@example.com
+                        bookedBy:
+                            id: 990061103
+                            name: Alex Johnson
+                            email: alexjohnson@example.com
+                        timeFrom: '2024-03-19T08:00:00.000'
+                        timeTo: '2024-03-19T19:00:00.000'
+                        locationId: 555220406
+                locations:
+                    -
+                        id: 555220406
+                        organisationId: 555510196
+                        parentId: 554228368
+                        name: 34 Exterior Space
+                        shortQualifier: Company Parking
+                        longQualifier: 'Company Office Parking, Company Parking'
+                        qualifiedName: '34 Exterior Space, Company Office Parking, Company Parking'
+                        bookingCategoryId: 554240906
+                        settings:
+                            timeZone:
+                                location:
+                                    id: 554228294
+                                    name: Company Parking
+                                zoneId: Europe/Madrid
+                ancestorLocations:
+                    -
+                        id: 554228294
+                        organisationId: 555510196
+                        kind: BUILDING
+                        name: Company Parking
+                        qualifiedName: Company Parking
+                        left: 1286
+                        right: 1741
+                        isFlex: false
+                        settings:
+                            timeZone:
+                                location:
+                                    id: 554228294
+                                    name: Company Parking
+                                zoneId: Europe/Madrid
+        SetBookingRequest:
+            title: Root Type for SetBookingRequest
+            description: ''
+            type: object
+            properties:
+                timeFrom:
+                    format: date-time
+                    type: string
+                timeTo:
+                    format: date-time
+                    type: string
+                locationId:
+                    format: int32
+                    type: integer
+                attendees:
+                    type: array
+                    items: {}
+                extraRequests:
+                    type: array
+                    items: {}
+                bookingGroup:
+                    type: object
+                    properties:
+                        repeatEndDate:
+                            format: date
+                            type: string
+                owner:
+                    type: object
+                    properties:
+                        id:
+                            format: int32
+                            type: integer
+                        email:
+                            type: string
+                        name:
+                            type: string
+                ownerIsAttendee:
+                    type: boolean
+                source:
+                    type: string
+            example:
+                timeFrom: '2024-05-23T08:00:00.000'
+                timeTo: '2024-05-23T19:00:00.000'
+                locationId: 12445
+                attendees: []
+                extraRequests: []
+                bookingGroup:
+                    repeatEndDate: '2024-05-09'
+                owner:
+                    id: 634634
+                    email: fakeMail
+                    name: fakeUser
+                ownerIsAttendee: true
+                source: WEB
+        AvailabilityResponseDto:
+            title: Root Type for AvailabilityResponseDto
+            description: ''
+            type: object
+            properties:
+                discreteAvailability:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/AvailabilityDiscreteDto'
+                locations:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/AvailabilityLocationDto'
+            example:
+                locations:
+                    -
+                        id: xxxx
+                        name: '3423'
+                        longQualifier: parking
+                discreteAvailability:
+                    -
+                        locationId: '1233452'
+                        status: a34234
+        AvailabilityLocationDto:
+            title: Root Type for AvailabilityLocationDto
+            description: ''
+            type: object
+            properties:
+                id:
+                    type: string
+                name:
+                    type: string
+                longQualifier:
+                    type: string
+            example:
+                id: xxxx
+                name: '3423'
+                longQualifier: parking
+        AvailabilityDiscreteDto:
+            title: Root Type for AvailabilityDiscreteDto
+            description: ''
+            type: object
+            properties:
+                locationId:
+                    type: string
+                status:
+                    enum:
+                        - AVAILABLE
+                        - BOOKED
+                        - UNAVAILABLE
+                    type: string
+            example:
+                locationId: '1233452'
+                status: a34234
     securitySchemes:
         ApiKeyAuth:
             type: apiKey
