@@ -1,23 +1,21 @@
 package org.crolopez.workplacereservationbot.telegram.infrastructure.repository;
 
 import jakarta.annotation.PostConstruct;
+import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
+import org.crolopez.workplacereservationbot.telegram.infrastructure.configuration.TelegramConfig;
 import org.crolopez.workplacereservationbot.telegram.infrastructure.handler.ApiClient;
 import org.crolopez.workplacereservationbot.telegram.infrastructure.handler.client.TelegramBotApi;
 import org.crolopez.workplacereservationbot.telegram.infrastructure.handler.client.dto.TelegramBotApiRequestDto;
-import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 @Singleton
 @Slf4j
 public class TelegramRepositoryImpl implements TelegramRepository {
 
-    @ConfigProperty(name = "telegram.bot.token")
-    private String token;
-
-    @ConfigProperty(name = "telegram.api.hostname")
-    private String telegramApiHostname;
+    @Inject
+    TelegramConfig config;
 
     private TelegramBotApi telegramBotApi;
 
@@ -36,14 +34,19 @@ public class TelegramRepositoryImpl implements TelegramRepository {
                 .parseMode("markdown")
                 .build();
 
-        telegramBotApi.sendMessage(token, apiRequestDto);
+        telegramBotApi.sendMessage(config.bot().token(), apiRequestDto);
 
         log.info(String.format("Message sent to %s chat: %s", chatId, message));
     }
 
+    @Override
+    public void send(String message) {
+        send(config.bot().defaultReportingChannel(), message);
+    }
+
     private ApiClient getApiClient() {
         ApiClient apiClient = new ApiClient();
-        apiClient.setHost(telegramApiHostname);
+        apiClient.setHost(config.api().hostname());
         apiClient.setScheme("https");
         return apiClient;
     }

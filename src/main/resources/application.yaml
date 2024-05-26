@@ -7,7 +7,7 @@ telegram:
     hostname: api.telegram.org
   bot:
     token: ${TELEGRAM_BOT_TOKEN}
-
+    default-reporting-channel: ${TELEGRAM_DEFAULT_REPORTING_CHANNEL}
 bookingPlatform:
   hostname: ${BOOKING_HOSTNAME}
   login:
