@@ -19,7 +19,8 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -40,6 +41,9 @@ public class BookingRepositoryImpl implements BookingRepository {
 
     @Inject
     private BookingPlatformConfig config;
+
+    @Inject
+    ExecutorService taskExecutor;
 
     private BookingPlatformApi bookingPlatformApi;
 
@@ -77,39 +81,22 @@ public class BookingRepositoryImpl implements BookingRepository {
     public String bookParking(String date) { // TODO: TOIMPROVE
         LocationEntity bookedLocation = null;
         List<LocationEntity> locations = getAvailability(date, config.keys().parking());
+
         for (BookingPlatformConfig.BookingPreference preference : config.bookingPreferences()) {
-            Integer tries = 0;
-            List<LocationEntity> filteredLocations = locations.stream()
-                    .filter(location -> location.getSpace().equals(preference.space())).collect(Collectors.toList());
-            for (String priority : preference.priority()) {
-                Pattern pattern = Pattern.compile(priority, Pattern.CASE_INSENSITIVE);
-                List<LocationEntity> priorityLocations = filteredLocations.stream()
-                        .filter(location -> pattern.matcher(location.getPlace()).find())
-                        .collect(Collectors.toList());
-                for (LocationEntity location : priorityLocations) {
-                    if (bookLocation(date, location.getId()))
-                        bookedLocation = location;
-                    if (bookedLocation != null || tries.equals(config.bookingBehaviour().maxTries())) {
-                        break;
-                    }
-                    tries++;
-                }
-                if (bookedLocation != null || tries.equals(config.bookingBehaviour().maxTries()))
-                    break;
-            }
-            if (bookedLocation != null)
+            bookedLocation = tryBookingLocations(date, locations, preference);
+            if (bookedLocation != null) {
                 break;
+            }
         }
 
         if (bookedLocation != null) {
             String message = String.format("Booked place for %s: %s", date, bookedLocation.getPlace());
-            log.info(message);
             return message;
         }
         return "Could not book anything";
     }
 
-    public boolean bookLocation(String date, String id) {
+    public CompletableFuture<Boolean> bookLocation(String date, String id) { // TODO: APPLICATION LAYER LOGIC | THIS CLASS MUST BE REFACTORED?
         LoginDetails loginDetails = getLoginDetails();
         BookingRequestDto bookingRequestDto = BookingRequestDto.builder()
                 .bookingGroup(BookingGroupDto.builder()
@@ -129,14 +116,18 @@ public class BookingRepositoryImpl implements BookingRepository {
                 .timeTo(date + "T19:00:00.000")
                 .build();
 
-        try {
-            bookingPlatformApi.book(X_MATRIX_SOURCE, X_TIME_ZONE,
-                    getLoginDetails().getCookie(), bookingRequestDto);
-            return true;
-        } catch (ApiException e) {
-            log.warn("Could not book {} for {}. Error: {}", id, date, e.getMessage());
-            return false;
-        }
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                log.info("Trying to book {} for {}", id, date);
+                bookingPlatformApi.book(X_MATRIX_SOURCE, X_TIME_ZONE,
+                        getLoginDetails().getCookie(), bookingRequestDto);
+                log.info("Successful booking for {}", id);
+                return true;
+            } catch (ApiException e) {
+                log.warn("Could not book {} for {}. Error: {}", id, date, e.getMessage());
+                return false;
+            }
+        }, taskExecutor);
     }
 
     private List<LocationEntity> getFilteredBookings(String bookingType) throws ApiException {
@@ -258,6 +249,54 @@ public class BookingRepositoryImpl implements BookingRepository {
                             .space(locationDto.getLongQualifier())
                             .build();
                 })
+                .collect(Collectors.toList());
+    }
+
+    private LocationEntity tryBookingLocations(String date, List<LocationEntity> locations, BookingPlatformConfig.BookingPreference preference) {
+        List<LocationEntity> filteredLocations = locations.stream()
+                .filter(location -> location.getSpace().equals(preference.space()))
+                .collect(Collectors.toList());
+
+        for (String priority : preference.priority()) {
+            List<LocationEntity> priorityLocations = filterLocationsByPriority(filteredLocations, priority);
+            List<CompletableFuture<LocationEntity>> futures = priorityLocations.stream()
+                    .map(location -> CompletableFuture.supplyAsync(() -> {
+                        try {
+                            return bookLocation(date, location.getId())
+                                    .get(config.bookingBehaviour().bookTimeout(), TimeUnit.SECONDS)
+                                        ? location
+                                        : null;
+                        } catch (InterruptedException | ExecutionException | TimeoutException e) {
+                            log.warn("Error or timeout booking location {} for {}: {}", location.getId(), date, e.getMessage());
+                            return null;
+                        }
+                    }, taskExecutor))
+                    .collect(Collectors.toList());
+
+            if (futures.isEmpty()) {
+                continue;
+            }
+
+            try {
+                CompletableFuture<LocationEntity> firstCompleted = CompletableFuture.anyOf(futures.toArray(new CompletableFuture[0]))
+                        .thenApply(result -> (LocationEntity) result);
+
+                LocationEntity bookedLocation = firstCompleted.get();
+                if (bookedLocation != null) {
+                    return bookedLocation;
+                }
+            } catch (InterruptedException | ExecutionException e) {
+                Thread.currentThread().interrupt();
+                log.error("Error booking location", e);
+            }
+        }
+        return null;
+    }
+
+    private List<LocationEntity> filterLocationsByPriority(List<LocationEntity> locations, String priority) {
+        Pattern pattern = Pattern.compile(priority, Pattern.CASE_INSENSITIVE);
+        return locations.stream()
+                .filter(location -> pattern.matcher(location.getPlace()).find())
                 .collect(Collectors.toList());
     }
 

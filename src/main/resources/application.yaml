@@ -20,7 +20,8 @@ bookingPlatform:
       parking:
         offset: "2w"
   booking-behaviour:
-    max-tries: 5
+    max-parallel-bookings: 4
+    book-timeout: 5
   booking-preferences:
     - space: ${BOOKING_PREFERENCES_0_SPACE}
       priority:

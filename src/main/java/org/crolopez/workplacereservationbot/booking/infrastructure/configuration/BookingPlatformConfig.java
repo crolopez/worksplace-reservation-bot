@@ -21,7 +21,8 @@ public interface BookingPlatformConfig {
     BookingBehaviour bookingBehaviour();
 
     interface BookingBehaviour {
-        Integer maxTries();
+        Integer maxParallelBookings();
+        Integer bookTimeout();
     }
 
     interface Schedule {
