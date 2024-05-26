@@ -11,4 +11,5 @@ public class LocationEntity {
     Date date;
     String id;
     String place;
+    String space;
 }

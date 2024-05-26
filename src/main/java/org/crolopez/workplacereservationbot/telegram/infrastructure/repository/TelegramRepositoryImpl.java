@@ -7,7 +7,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.crolopez.workplacereservationbot.telegram.infrastructure.handler.ApiClient;
 import org.crolopez.workplacereservationbot.telegram.infrastructure.handler.client.TelegramBotApi;
 import org.crolopez.workplacereservationbot.telegram.infrastructure.handler.client.dto.TelegramBotApiRequestDto;
-import org.crolopez.workplacereservationbot.telegram.infrastructure.handler.telegram.dto.TelegramMessageChatDto;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 @Singleton
@@ -30,16 +29,16 @@ public class TelegramRepositoryImpl implements TelegramRepository {
 
     @SneakyThrows
     @Override
-    public void send(TelegramMessageChatDto chat, String message) {
+    public void send(String chatId, String message) {
         TelegramBotApiRequestDto apiRequestDto = TelegramBotApiRequestDto.builder()
-                .chatId(chat.getId())
+                .chatId(chatId)
                 .text(message)
                 .parseMode("markdown")
                 .build();
 
         telegramBotApi.sendMessage(token, apiRequestDto);
 
-        log.info(String.format("Message sent to %s chat: %s", chat.getId(), message));
+        log.info(String.format("Message sent to %s chat: %s", chatId, message));
     }
 
     private ApiClient getApiClient() {

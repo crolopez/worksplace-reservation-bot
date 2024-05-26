@@ -1,11 +1,8 @@
 package org.crolopez.workplacereservationbot.booking.infrastructure.configuration;
 
 import io.smallrye.config.ConfigMapping;
-import jakarta.inject.Singleton;
-import lombok.Data;
-import lombok.Getter;
-import org.eclipse.microprofile.config.inject.ConfigProperties;
-import org.eclipse.microprofile.config.inject.ConfigProperty;
+
+import java.util.List;
 
 @ConfigMapping(prefix = "bookingPlatform")
 public interface BookingPlatformConfig {
@@ -15,7 +12,25 @@ public interface BookingPlatformConfig {
 
     MatchingTag matchingTag();
 
+    List<BookingPreference> bookingPreferences();
+
     Keys keys();
+
+    Schedule schedule();
+
+    BookingBehaviour bookingBehaviour();
+
+    interface BookingBehaviour {
+        Integer maxTries();
+    }
+
+    interface Schedule {
+        Parking parking();
+    }
+
+    interface Parking {
+        String offset();
+    }
 
     interface Login {
 
@@ -41,4 +56,12 @@ public interface BookingPlatformConfig {
 
         String l();
     }
+
+
+    interface BookingPreference {
+        String space();
+
+        List<String> priority();
+    }
+
 }

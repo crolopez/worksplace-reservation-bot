@@ -1,18 +1,25 @@
 package org.crolopez.workplacereservationbot.booking.infrastructure.repositories;
 
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import jakarta.annotation.PostConstruct;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
 import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
 import org.crolopez.workplacereservationbot.booking.domain.entities.LocationEntity;
 import org.crolopez.workplacereservationbot.booking.domain.entities.repositories.BookingRepository;
 import org.crolopez.workplacereservationbot.booking.infrastructure.configuration.BookingPlatformConfig;
+import org.crolopez.workplacereservationbot.booking.infrastructure.entities.LoginDetails;
 import org.crolopez.workplacereservationbot.booking.infrastructure.repositories.client.BookingPlatformApi;
 import org.crolopez.workplacereservationbot.booking.infrastructure.repositories.client.dto.*;
 
 import java.sql.Date;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -21,10 +28,15 @@ import java.util.stream.Collectors;
 import static org.crolopez.workplacereservationbot.booking.infrastructure.repositories.client.dto.AvailabilityDiscreteDto.StatusEnum.AVAILABLE;
 
 @Singleton
+@Slf4j
 public class BookingRepositoryImpl implements BookingRepository {
 
     private final String X_MATRIX_SOURCE = "WEB";
     private final String X_TIME_ZONE = "Europe/Madrid";
+
+    private Cache<String, LoginDetails> loginDetailsCache = Caffeine.newBuilder()
+            .expireAfterWrite(6, TimeUnit.HOURS)
+            .build();
 
     @Inject
     private BookingPlatformConfig config;
@@ -60,22 +72,93 @@ public class BookingRepositoryImpl implements BookingRepository {
         return getAvailability(date, config.keys().office());
     }
 
+    @SneakyThrows
+    @Override
+    public String bookParking(String date) { // TODO: TOIMPROVE
+        LocationEntity bookedLocation = null;
+        List<LocationEntity> locations = getAvailability(date, config.keys().parking());
+        for (BookingPlatformConfig.BookingPreference preference : config.bookingPreferences()) {
+            Integer tries = 0;
+            List<LocationEntity> filteredLocations = locations.stream()
+                    .filter(location -> location.getSpace().equals(preference.space())).collect(Collectors.toList());
+            for (String priority : preference.priority()) {
+                Pattern pattern = Pattern.compile(priority, Pattern.CASE_INSENSITIVE);
+                List<LocationEntity> priorityLocations = filteredLocations.stream()
+                        .filter(location -> pattern.matcher(location.getPlace()).find())
+                        .collect(Collectors.toList());
+                for (LocationEntity location : priorityLocations) {
+                    if (bookLocation(date, location.getId()))
+                        bookedLocation = location;
+                    if (bookedLocation != null || tries.equals(config.bookingBehaviour().maxTries())) {
+                        break;
+                    }
+                    tries++;
+                }
+                if (bookedLocation != null || tries.equals(config.bookingBehaviour().maxTries()))
+                    break;
+            }
+            if (bookedLocation != null)
+                break;
+        }
+
+        if (bookedLocation != null) {
+            String message = String.format("Booked place for %s: %s", date, bookedLocation.getPlace());
+            log.info(message);
+            return message;
+        }
+        return "Could not book anything";
+    }
+
+    public boolean bookLocation(String date, String id) {
+        LoginDetails loginDetails = getLoginDetails();
+        BookingRequestDto bookingRequestDto = BookingRequestDto.builder()
+                .bookingGroup(BookingGroupDto.builder()
+                        .repeatEndDate(LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE))
+                        .build())
+                .attendees(List.of())
+                .extraRequests(List.of())
+                .locationId(id)
+                .owner(IdentityDto.builder()
+                        .email(loginDetails.getEmail())
+                        .id(loginDetails.getPersonId())
+                        .name(loginDetails.getName())
+                        .build())
+                .ownerIsAttendee(true)
+                .source("WEB")
+                .timeFrom(date + "T08:00:00.000")
+                .timeTo(date + "T19:00:00.000")
+                .build();
+
+        try {
+            bookingPlatformApi.book(X_MATRIX_SOURCE, X_TIME_ZONE,
+                    getLoginDetails().getCookie(), bookingRequestDto);
+            return true;
+        } catch (ApiException e) {
+            log.warn("Could not book {} for {}. Error: {}", id, date, e.getMessage());
+            return false;
+        }
+    }
+
     private List<LocationEntity> getFilteredBookings(String bookingType) throws ApiException {
-        String authToken = getAuthToken();
-        UserBookingResponseDto response = getBookings(authToken);
+        UserBookingResponseDto response = getBookings();
 
         Map<String, LocationDto> locationMap = response.getLocations().stream()
                 .filter(location -> location.getShortQualifier().equals(bookingType))
                 .collect(Collectors.toMap(LocationDto::getId, Function.identity()));
 
+        Map<String, AncestorLocationDto> ancestors = response.getAncestorLocations().stream()
+                .collect(Collectors.toMap(AncestorLocationDto::getId, Function.identity()));
+
         List<LocationEntity> bookingEntities = response.getBookings().stream()
                 .filter(booking -> locationMap.containsKey(booking.getLocationId()))
                 .map(booking -> {
                     LocationDto location = locationMap.get(booking.getLocationId());
+                    AncestorLocationDto ancestor = ancestors.get(location.getParentId());
                     return LocationEntity.builder()
                             .date(Date.from(booking.getTimeFrom().toInstant()))
                             .id(booking.getId())
                             .place(location.getQualifiedName())
+                            .space(ancestor.getName())
                             .build();
                 })
                 .collect(Collectors.toList());
@@ -83,27 +166,46 @@ public class BookingRepositoryImpl implements BookingRepository {
         return bookingEntities;
     }
 
-    private UserBookingResponseDto getBookings(String authToken) throws ApiException {
-        String cookie = getCookie(authToken);
+    private UserBookingResponseDto getBookings() throws ApiException {
         List<String> includes = List.of("locations", "visit", "facilities", "extras", "bookingSettings", "layouts");
 
-        return bookingPlatformApi.getUserBookings(X_MATRIX_SOURCE, X_TIME_ZONE, cookie, includes);
+        return bookingPlatformApi.getUserBookings(X_MATRIX_SOURCE, X_TIME_ZONE, getLoginDetails().getCookie(),
+                includes);
     }
 
-    private String getCookie(String authToken) {
-        return String.format("MatrixAuthToken=%s", authToken);
+    private String getCookie(String token) {
+        return String.format("MatrixAuthToken=%s", token);
     }
 
-    private String getAuthToken() throws ApiException {
+    @SneakyThrows
+    private LoginDetails getLoginDetails() {
+        LoginDetails cachedLoginDetails = loginDetailsCache.getIfPresent("login");
+        if (cachedLoginDetails != null) {
+            log.info("Returning cached login details");
+            return cachedLoginDetails;
+        }
+
+        log.info("Authenticating user");
+
         LoginRequestDto loginRequest = LoginRequestDto.builder()
                 .password(config.login().password())
                 .username(config.login().user())
                 .build();
 
-        ApiResponse<Login200Response> response = bookingPlatformApi.loginWithHttpInfo(X_MATRIX_SOURCE, X_TIME_ZONE,
+        ApiResponse<LoginResponseDto> response = bookingPlatformApi.loginWithHttpInfo(X_MATRIX_SOURCE, X_TIME_ZONE,
                 loginRequest);
 
-        return getAuthTokenFromResponse(response);
+        LoginResponseDto loginResponseDto = response.getData();
+        LoginDetails newAuthDetails = LoginDetails.builder()
+                .name(loginResponseDto.getName())
+                .email(loginResponseDto.getEmail())
+                .organisationId(loginResponseDto.getOrganisationId())
+                .personId(loginResponseDto.getPersonId())
+                .cookie(getCookie(getAuthTokenFromResponse(response)))
+                .build();
+
+        loginDetailsCache.put("login", newAuthDetails);
+        return newAuthDetails;
     }
 
     private ApiClient getApiClient() {
@@ -113,7 +215,7 @@ public class BookingRepositoryImpl implements BookingRepository {
         return apiClient;
     }
 
-    private String getAuthTokenFromResponse(ApiResponse<Login200Response> response) {
+    private String getAuthTokenFromResponse(ApiResponse<LoginResponseDto> response) {
         final String cookieHeader = "set-cookie";
         final String authTokenKey = "MatrixAuthToken";
         Pattern pattern = Pattern.compile(authTokenKey + "=([^;]+)");
@@ -129,16 +231,15 @@ public class BookingRepositoryImpl implements BookingRepository {
     }
 
     private List<LocationEntity> getAvailability(String date, BookingPlatformConfig.KeyNode key) throws ApiException {
-        String authToken = getAuthToken();
-        String cookie = getCookie(authToken);
-        List<String> includes = List.of("locations", "facilities", "layouts", "bookingSettings", "floorplan", "bookings", "discrete");
+        List<String> includes = List.of("locations", "facilities", "layouts", "bookingSettings", "floorplan",
+                "bookings", "discrete");
         List<String> status = List.of("available", "unavailable", "booked");
 
         String from = date + "T00:00";
         String to = date + "T23:59";
 
         ApiResponse<AvailabilityResponseDto> response = bookingPlatformApi.getAvailabilityWithHttpInfo(from, to,
-                key.bc(), key.l(), includes, status, X_MATRIX_SOURCE, X_TIME_ZONE, cookie);
+                key.bc(), key.l(), includes, status, X_MATRIX_SOURCE, X_TIME_ZONE, getLoginDetails().getCookie());
         List<AvailabilityDiscreteDto> availableLocations = response.getData().getDiscreteAvailability();
         List<AvailabilityLocationDto> locations = response.getData().getLocations();
 
@@ -154,6 +255,7 @@ public class BookingRepositoryImpl implements BookingRepository {
                             .date(Date.valueOf(date))
                             .place(locationDto.getName())
                             .id(locationDto.getId())
+                            .space(locationDto.getLongQualifier())
                             .build();
                 })
                 .collect(Collectors.toList());

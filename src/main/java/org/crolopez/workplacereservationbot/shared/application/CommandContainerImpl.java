@@ -6,10 +6,7 @@ import lombok.Getter;
 import org.crolopez.workplacereservationbot.shared.application.entities.command.CommandEntity;
 
 import jakarta.inject.Inject;
-import org.crolopez.workplacereservationbot.telegram.application.entities.command.GetOfficeAvailabilityCommandEntity;
-import org.crolopez.workplacereservationbot.telegram.application.entities.command.GetOfficeBookingsCommandEntity;
-import org.crolopez.workplacereservationbot.telegram.application.entities.command.GetParkingAvailabilityCommandEntity;
-import org.crolopez.workplacereservationbot.telegram.application.entities.command.GetParkingBookingsCommandEntity;
+import org.crolopez.workplacereservationbot.telegram.application.entities.command.*;
 
 import java.util.List;
 
@@ -31,13 +28,17 @@ public class CommandContainerImpl {
     @Inject
     private GetParkingAvailabilityCommandEntity getParkingAvailabilityCommand;
 
+    @Inject
+    private BookParkingCommandEntity bookParkingCommand;
+
     @PostConstruct
     private void init() {
         this.commands = List.of(
                 getOfficeBookingsCommand,
                 getParkingBookingsCommand,
                 getOfficeAvailabilityCommand,
-                getParkingAvailabilityCommand
+                getParkingAvailabilityCommand,
+                bookParkingCommand
         );
     }
 }

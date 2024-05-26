@@ -16,6 +16,24 @@ bookingPlatform:
   matching-tag:
     office: ${BOOKING_MATCHING_TAG_OFFICE}
     parking: ${BOOKING_MATCHING_TAG_PARKING}
+  schedule:
+      parking:
+        offset: "2w"
+  booking-behaviour:
+    max-tries: 5
+  booking-preferences:
+    - space: ${BOOKING_PREFERENCES_0_SPACE}
+      priority:
+        - ${BOOKING_PREFERENCES_0_PRIORITY_0}
+        - ${BOOKING_PREFERENCES_0_PRIORITY_1}
+        - ${BOOKING_PREFERENCES_0_PRIORITY_2}
+    - space: ${BOOKING_PREFERENCES_1_SPACE}
+      priority:
+        - ${BOOKING_PREFERENCES_1_PRIORITY_0}
+    - space: ${BOOKING_PREFERENCES_2_SPACE}
+      priority:
+        - ${BOOKING_PREFERENCES_2_PRIORITY_0}
+        - ${BOOKING_PREFERENCES_2_PRIORITY_1}
   keys:
     office:
       bc: ${BOOKING_KEYS_OFFICE_BC}

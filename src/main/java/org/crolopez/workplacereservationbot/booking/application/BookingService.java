@@ -7,8 +7,7 @@ import java.util.List;
 public interface BookingService {
     List<LocationEntity> getOfficeBookings();
     List<LocationEntity> getParkingBookings();
-    String bookOfficeSlot();
-    String bookParkingSlot();
     List<LocationEntity> getParkingAvailability(String date);
     List<LocationEntity> getOfficeAvailability(String date);
+    String bookParking(String date);
 }

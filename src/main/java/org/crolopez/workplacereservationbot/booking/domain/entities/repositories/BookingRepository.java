@@ -13,4 +13,6 @@ public interface BookingRepository {
     List<LocationEntity> getParkingAvailability(String date);
 
     List<LocationEntity> getOfficeAvailability(String date);
+
+    String bookParking(String date);
 }

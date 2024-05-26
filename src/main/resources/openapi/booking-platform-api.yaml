@@ -32,7 +32,7 @@ paths:
                     content:
                         application/json:
                             schema:
-                                type: object
+                                $ref: '#/components/schemas/LoginResponseDto'
                                 properties:
                                     token:
                                         description: Authentication token
@@ -115,21 +115,11 @@ paths:
                 content:
                     application/json:
                         schema:
-                            $ref: '#/components/schemas/SetBookingRequest'
+                            $ref: '#/components/schemas/BookingRequestDto'
                 required: true
             tags:
                 - bookingPlatform
             parameters:
-                -
-                    style: form
-                    explode: true
-                    name: include
-                    schema:
-                        type: array
-                        items:
-                            type: string
-                    in: query
-                    required: false
                 -
                     name: x-matrix-source
                     schema:
@@ -158,7 +148,13 @@ paths:
                             schema:
                                 $ref: '#/components/schemas/BookingsResponseDto'
                     description: OK
-            operationId: setBooking
+                '409':
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/BookingErrorResponse'
+                    description: NO OK
+            operationId: book
     /availability:
         get:
             tags:
@@ -485,8 +481,7 @@ components:
             type: object
             properties:
                 id:
-                    format: int32
-                    type: integer
+                    type: string
                 owner:
                     $ref: '#/components/schemas/IdentityDto'
                     properties:
@@ -514,8 +509,7 @@ components:
                     format: date-time
                     type: string
                 locationId:
-                    format: int32
-                    type: integer
+                    type: string
                 locationKind:
                     type: string
                 status:
@@ -559,8 +553,7 @@ components:
                 source:
                     type: string
                 version:
-                    format: int32
-                    type: integer
+                    type: string
                 hasExternalNotes:
                     type: boolean
             example:
@@ -665,60 +658,6 @@ components:
                                     id: 554228294
                                     name: Company Parking
                                 zoneId: Europe/Madrid
-        SetBookingRequest:
-            title: Root Type for SetBookingRequest
-            description: ''
-            type: object
-            properties:
-                timeFrom:
-                    format: date-time
-                    type: string
-                timeTo:
-                    format: date-time
-                    type: string
-                locationId:
-                    format: int32
-                    type: integer
-                attendees:
-                    type: array
-                    items: {}
-                extraRequests:
-                    type: array
-                    items: {}
-                bookingGroup:
-                    type: object
-                    properties:
-                        repeatEndDate:
-                            format: date
-                            type: string
-                owner:
-                    type: object
-                    properties:
-                        id:
-                            format: int32
-                            type: integer
-                        email:
-                            type: string
-                        name:
-                            type: string
-                ownerIsAttendee:
-                    type: boolean
-                source:
-                    type: string
-            example:
-                timeFrom: '2024-05-23T08:00:00.000'
-                timeTo: '2024-05-23T19:00:00.000'
-                locationId: 12445
-                attendees: []
-                extraRequests: []
-                bookingGroup:
-                    repeatEndDate: '2024-05-09'
-                owner:
-                    id: 634634
-                    email: fakeMail
-                    name: fakeUser
-                ownerIsAttendee: true
-                source: WEB
         AvailabilityResponseDto:
             title: Root Type for AvailabilityResponseDto
             description: ''
@@ -732,6 +671,11 @@ components:
                     type: array
                     items:
                         $ref: '#/components/schemas/AvailabilityLocationDto'
+                ancestorLocations:
+                    description: ''
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/AncestorLocationDto'
             example:
                 locations:
                     -
@@ -745,6 +689,8 @@ components:
         AvailabilityLocationDto:
             title: Root Type for AvailabilityLocationDto
             description: ''
+            required:
+                - parentId
             type: object
             properties:
                 id:
@@ -752,6 +698,9 @@ components:
                 name:
                     type: string
                 longQualifier:
+                    type: string
+                parentId:
+                    description: ''
                     type: string
             example:
                 id: xxxx
@@ -773,6 +722,99 @@ components:
             example:
                 locationId: '1233452'
                 status: a34234
+        BookingRequestDto:
+            title: Root Type for BookingRequestDto
+            description: ''
+            required:
+                - owner
+                - bookingGroup
+            type: object
+            properties:
+                timeFrom:
+                    type: string
+                timeTo:
+                    type: string
+                locationId:
+                    type: string
+                attendees:
+                    type: array
+                    items: {}
+                extraRequests:
+                    type: array
+                    items: {}
+                bookingGroup:
+                    $ref: '#/components/schemas/BookingGroupDto'
+                    properties:
+                        repeatEndDate:
+                            format: date
+                            type: string
+                owner:
+                    $ref: '#/components/schemas/IdentityDto'
+                    properties:
+                        id:
+                            format: int32
+                            type: integer
+                        email:
+                            type: string
+                        name:
+                            type: string
+                ownerIsAttendee:
+                    type: boolean
+                source:
+                    type: string
+            example:
+                timeFrom: '2024-05-28T08:00:00.000'
+                timeTo: '2024-05-28T19:00:00.000'
+                locationId: 2523523
+                attendees: []
+                extraRequests: []
+                bookingGroup:
+                    repeatEndDate: '2024-05-14'
+                owner:
+                    id: 23523523
+                    email: fakeMail
+                    name: fakeUser
+                ownerIsAttendee: true
+                source: WEB
+        BookingGroupDto:
+            title: Root Type for BookingGroupDto
+            description: ''
+            type: object
+            properties:
+                repeatEndDate:
+                    type: string
+            example:
+                repeatEndDate: '2024-05-14'
+        LoginResponseDto:
+            title: Root Type for LoginResponseDto
+            description: ''
+            type: object
+            properties:
+                organisationId:
+                    type: string
+                personId:
+                    type: string
+                name:
+                    type: string
+                email:
+                    type: string
+            example:
+                organisationId: 532523
+                personId: 23532523
+                name: fakeName
+                email: fakeMail
+        BookingErrorResponse:
+            title: Root Type for BookingErrorResponse
+            description: ''
+            type: object
+            properties:
+                messageCode:
+                    type: string
+                message:
+                    type: string
+            example:
+                messageCode: fasfasf23
+                message: aasdasfas2
     securitySchemes:
         ApiKeyAuth:
             type: apiKey

@@ -39,7 +39,7 @@ public class TelegramHandler implements RequestHandler<TelegramEventDto, APIGate
         EventEntity eventEntity = inputMapper.convert(requestBody);
 
         String result = dispatcher.process(eventEntity);
-        repository.send(requestBody.getMessage().getChat(), result);
+        repository.send(requestBody.getMessage().getChat().getId(), result);
 
         return outputMapper.convert(result);
     }
