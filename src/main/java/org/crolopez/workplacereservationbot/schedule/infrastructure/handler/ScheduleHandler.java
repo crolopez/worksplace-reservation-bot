@@ -58,7 +58,16 @@ public class ScheduleHandler implements RequestHandler<ScheduledEvent, APIGatewa
         }
         log.info("Launching the scheduled command");
 
-        String result = dispatcher.process(eventEntity);
+        String result;
+        do {
+            result = dispatcher.process(eventEntity);
+            try {
+                Thread.sleep(50);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        } while(result.contains("Could not"));
+
         repository.send(result);
 
         return outputMapper.convert(result);
